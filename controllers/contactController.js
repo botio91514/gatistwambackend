@@ -21,33 +21,26 @@ exports.submitContact = async (req, res) => {
     const contact = await Contact.create({
       name,
       email,
-      phone: phone || 'Not provided', // Allow empty phone if model validation permits or if we change model
+      phone: phone || 'Not provided',
       subject,
       message
     });
 
     console.log('Contact form saved successfully:', contact);
 
-    // Send emails and update sheet in parallel (mostly)
-    try {
-      // 1. Send Thank You Email to User
-      const userEmailSent = await sendThankYouEmail(contact);
-      if (!userEmailSent) console.warn('Failed to send thank you email to:', email);
-
-      // 2. Send Notification Email to Admin
-      const adminEmailSent = await sendAdminNotificationEmail(contact);
-      if (!adminEmailSent) console.warn('Failed to send admin notification');
-
-    } catch (serviceError) {
-      console.error('Error in post-submission services:', serviceError);
-      // Don't fail the request if just notifications fail, but log it
-    }
-
+    // Send response IMMEDIATELY so the user doesn't wait
     res.status(201).json({
       success: true,
       data: contact,
       message: 'Thank you for contacting us. We will get back to you soon.'
     });
+
+    // Send emails in background
+    // We do NOT await these so the response is fast
+    Promise.all([
+      sendThankYouEmail(contact).catch(err => console.error('Failed to send thank you email:', err)),
+      sendAdminNotificationEmail(contact).catch(err => console.error('Failed to send admin email:', err))
+    ]);
   } catch (error) {
     console.error('Error saving contact form:', error);
     res.status(400).json({
