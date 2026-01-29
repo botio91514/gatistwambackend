@@ -3,9 +3,19 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure upload directory exists
-const uploadDir = path.join(__dirname, '..', 'uploads', 'blog');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure upload directory exists
+const isVercel = process.env.VERCEL === '1';
+// If on Vercel, use /tmp which is writable. Otherwise use local uploads folder.
+const uploadBase = isVercel ? '/tmp' : path.join(__dirname, '..');
+const uploadDir = path.join(uploadBase, 'uploads', 'blog');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (error) {
+  console.warn('Failed to create blog upload directory:', error.message);
+  // Continue execution; uploads might fail later but server won't crash on startup
 }
 
 // Configure storage
