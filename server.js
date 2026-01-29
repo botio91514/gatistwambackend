@@ -11,6 +11,9 @@ dotenv.config();
 // Create Express app
 const app = express();
 
+// Explicitly handle preflight
+app.options('*', cors());
+
 // Middleware
 app.use(cors({
   origin: '*', // Allow ALL origins for now to fix access issues
