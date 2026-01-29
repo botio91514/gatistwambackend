@@ -22,19 +22,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Define upload directories
-const uploadsDir = path.join(__dirname, 'uploads');
+// Define upload directories
+// On Vercel (Serverless), the filesystem is read-only except for /tmp
+const isVercel = process.env.VERCEL === '1';
+const uploadsBase = isVercel ? '/tmp' : __dirname;
+const uploadsDir = path.join(uploadsBase, 'uploads');
 const blogUploadsDir = path.join(uploadsDir, 'blog');
 const portfolioUploadsDir = path.join(uploadsDir, 'portfolio');
 
-// Ensure upload directories exist
-[uploadsDir, blogUploadsDir, portfolioUploadsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+// Ensure upload directories exist (only if possible)
+try {
+  [uploadsDir, blogUploadsDir, portfolioUploadsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+} catch (error) {
+  console.warn('Could not create upload directories (likely read-only FS):', error.message);
+}
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(uploadsDir));
+// Serve static files from uploads directory (standard) or ignore on Vercel
+if (!isVercel) {
+  app.use('/uploads', express.static(uploadsDir));
+}
 
 // Database connection
 const connectDB = require('./config/db');
