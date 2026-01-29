@@ -28,19 +28,26 @@ exports.submitContact = async (req, res) => {
 
     console.log('Contact form saved successfully:', contact);
 
-    // Send response IMMEDIATELY so the user doesn't wait
+    // VERCEL / SERVERLESS NOTE:
+    // We MUST await these promises. In a serverless environment like Vercel,
+    // the process freezes/terminates immediately after res.json() is called.
+    // Background promises (fire-and-forget) will be killed and emails won't send.
+
+    try {
+      await Promise.all([
+        sendThankYouEmail(contact).catch(err => console.error('Failed to send thank you email:', err)),
+        sendAdminNotificationEmail(contact).catch(err => console.error('Failed to send admin email:', err))
+      ]);
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // We still return success because the data is saved in DB
+    }
+
     res.status(201).json({
       success: true,
       data: contact,
       message: 'Thank you for contacting us. We will get back to you soon.'
     });
-
-    // Send emails in background
-    // We do NOT await these so the response is fast
-    Promise.all([
-      sendThankYouEmail(contact).catch(err => console.error('Failed to send thank you email:', err)),
-      sendAdminNotificationEmail(contact).catch(err => console.error('Failed to send admin email:', err))
-    ]);
   } catch (error) {
     console.error('Error saving contact form:', error);
     res.status(400).json({
