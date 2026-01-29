@@ -3,9 +3,19 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure upload directory exists
-const uploadDir = 'uploads/portfolio';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure upload directory exists
+const isVercel = process.env.VERCEL === '1';
+// Note: On Vercel we use /tmp but files are ephemeral (deleted after request).
+// Real apps should use S3/Cloudinary.
+const baseDir = isVercel ? '/tmp' : '.';
+const uploadDir = path.join(baseDir, 'uploads', 'portfolio');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (error) {
+  console.warn('Failed to create portfolio upload directory:', error.message);
 }
 
 // Configure storage
