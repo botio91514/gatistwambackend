@@ -50,8 +50,25 @@ if (!isVercel) {
 }
 
 // Database connection
+// Database connection
 const connectDB = require('./config/db');
-connectDB();
+// Don't connect immediately at top level for Serverless
+
+// Add root route for health check
+app.get('/', (req, res) => {
+  res.send('Gatistwam Backend is Running');
+});
+
+// Middleware to ensure DB connects for every request
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Routes
 const userRoutes = require('./routes/api/users');
